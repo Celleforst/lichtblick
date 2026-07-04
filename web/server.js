@@ -243,7 +243,8 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
   wss.handleUpgrade(req, socket, head, (clientWs) => {
-    const serverWs = new WebSocket(target);
+    const protocols = req.headers["sec-websocket-protocol"];
+    const serverWs = new WebSocket(target, protocols ? protocols.split(/,\s*/) : undefined);
     serverWs.on("open", () => {
       clientWs.on("message", (data, isBinary) => {
         if (serverWs.readyState === WebSocket.OPEN) serverWs.send(data, { binary: isBinary });
