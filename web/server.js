@@ -11,6 +11,8 @@ const path = require("path");
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
 const ROSBAG_FOLDER = process.env.ROSBAG_FOLDER ?? "/mnt/rosbags";
+const CONFIG_DIR = process.env.CONFIG_DIR ?? "/app/config";
+const EXTENSIONS_DIR = process.env.EXTENSIONS_DIR ?? "/app/extensions";
 const STATIC_DIR = path.join(__dirname, ".webpack");
 
 function listBagsRecursive(dir, base = "") {
@@ -33,20 +35,32 @@ function listBagsRecursive(dir, base = "") {
   return results;
 }
 
+function getDefaultLayout() {
+  try {
+    const layoutPath = path.join(CONFIG_DIR, "default-layout.json");
+    return fs.readFileSync(layoutPath, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function serveIndex(res) {
+  const indexPath = path.join(STATIC_DIR, "index.html");
+  fs.readFile(indexPath, "utf8", (e, html) => {
+    if (e != null) { res.writeHead(404); res.end("Not found"); return; }
+    const layout = getDefaultLayout();
+    if (layout.length > 0) {
+      html = html.replace("/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/", layout);
+    }
+    res.writeHead(200, { "Content-Type": "text/html", "Content-Length": Buffer.byteLength(html) });
+    res.end(html);
+  });
+}
+
 function serveStaticFile(filePath, req, res) {
   fs.stat(filePath, (err, stat) => {
     if (err != null || !stat.isFile()) {
-      // SPA fallback: serve index.html for unknown paths
-      const indexPath = path.join(STATIC_DIR, "index.html");
-      fs.readFile(indexPath, (e, data) => {
-        if (e != null) {
-          res.writeHead(404);
-          res.end("Not found");
-          return;
-        }
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(data);
-      });
+      serveIndex(res);
       return;
     }
     serveWithRange(filePath, stat, req, res);
@@ -130,6 +144,32 @@ const server = http.createServer((req, res) => {
       "Access-Control-Expose-Headers": "Accept-Ranges, Content-Range, Content-Length",
     });
     res.end();
+    return;
+  }
+
+  if (pathname === "/api/extensions") {
+    let files = [];
+    try {
+      files = fs.readdirSync(EXTENSIONS_DIR)
+        .filter((f) => f.endsWith(".foxe"))
+        .map((f) => ({ name: f, url: `/api/extensions/${f}` }));
+    } catch { /* folder doesn't exist, return empty list */ }
+    const body = JSON.stringify(files);
+    res.writeHead(200, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) });
+    res.end(body);
+    return;
+  }
+
+  if (pathname.startsWith("/api/extensions/")) {
+    const name = path.basename(pathname);
+    const filePath = path.join(EXTENSIONS_DIR, name);
+    if (!filePath.startsWith(path.resolve(EXTENSIONS_DIR)) || !name.endsWith(".foxe")) {
+      res.writeHead(403); res.end("Forbidden"); return;
+    }
+    fs.stat(filePath, (err, stat) => {
+      if (err != null || !stat.isFile()) { res.writeHead(404); res.end("Not found"); return; }
+      serveWithRange(filePath, stat, req, res);
+    });
     return;
   }
 

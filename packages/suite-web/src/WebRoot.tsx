@@ -7,6 +7,8 @@
 
 import { useMemo, useState } from "react";
 
+import { useServerExtensionSync } from "./hooks/useServerExtensionSync";
+
 import {
   AppBarProps,
   AppSetting,
@@ -67,6 +69,8 @@ export function WebRoot(props: {
     }
     return params;
   });
+
+  useServerExtensionSync();
 
   const dataSources = useMemo(() => {
     const sources = [
