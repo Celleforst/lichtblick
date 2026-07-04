@@ -33,6 +33,11 @@ import LocalStorageAppConfiguration from "./services/LocalStorageAppConfiguratio
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
+function ServerExtensionSyncer(): null {
+  useServerExtensionSync();
+  return null;
+}
+
 export function WebRoot(props: {
   extraProviders: React.JSX.Element[] | undefined;
   dataSources: IDataSourceFactory[] | undefined;
@@ -70,8 +75,6 @@ export function WebRoot(props: {
     return params;
   });
 
-  useServerExtensionSync();
-
   const dataSources = useMemo(() => {
     const sources = [
       new Ros1LocalBagDataSourceFactory(),
@@ -99,6 +102,7 @@ export function WebRoot(props: {
       extraProviders={props.extraProviders}
       AppBarComponent={props.AppBarComponent}
     >
+      <ServerExtensionSyncer />
       {props.children}
     </SharedRoot>
   );

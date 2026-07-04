@@ -52,7 +52,12 @@ function serveIndex(res) {
     if (layout.length > 0) {
       html = html.replace("/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/", layout);
     }
-    res.writeHead(200, { "Content-Type": "text/html", "Content-Length": Buffer.byteLength(html) });
+    res.writeHead(200, {
+      "Content-Type": "text/html",
+      "Content-Length": Buffer.byteLength(html),
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "credentialless",
+    });
     res.end(html);
   });
 }
