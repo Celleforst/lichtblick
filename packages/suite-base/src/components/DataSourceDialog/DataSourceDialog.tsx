@@ -23,9 +23,10 @@ import { useWorkspaceActions } from "@lichtblick/suite-base/context/Workspace/us
 import { AppEvent } from "@lichtblick/suite-base/services/IAnalytics";
 
 import Connection from "./Connection";
+import ServerFileBrowser from "./ServerFileBrowser";
 import Start from "./Start";
 
-export type DataSourceDialogItem = "start" | "file" | "demo" | "remote" | "connection";
+export type DataSourceDialogItem = "start" | "file" | "demo" | "remote" | "connection" | "server-file";
 
 type DataSourceDialogProps = {
   backdropAnimation?: boolean;
@@ -113,6 +114,11 @@ export function DataSourceDialog(props: DataSourceDialogProps): React.JSX.Elemen
         return {
           title: "Open new connection",
           component: <Connection />,
+        };
+      case "server-file":
+        return {
+          title: "Open server file",
+          component: <ServerFileBrowser />,
         };
       default:
         return {
