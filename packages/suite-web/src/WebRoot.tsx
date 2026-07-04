@@ -32,7 +32,7 @@ import LocalStorageAppConfiguration from "./services/LocalStorageAppConfiguratio
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
-function ServerExtensionSyncProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+function ServerExtensionSyncProvider({ children }: { children?: React.ReactNode }): React.JSX.Element {
   useServerExtensionSync();
   return <>{children}</>;
 }
