@@ -152,6 +152,27 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === "/api/ext-proxy") {
+    const target = url.searchParams.get("url");
+    if (!target) { res.writeHead(400); res.end("Missing url"); return; }
+    let targetUrl;
+    try { targetUrl = new URL(target); } catch { res.writeHead(400); res.end("Invalid url"); return; }
+    if (targetUrl.protocol !== "https:") { res.writeHead(403); res.end("Only https allowed"); return; }
+    try {
+      const upstream = await fetch(target);
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      res.writeHead(upstream.status, {
+        "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+        "Content-Length": buf.length,
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(buf);
+    } catch (err) {
+      res.writeHead(502); res.end("Proxy fetch failed");
+    }
+    return;
+  }
+
   if (pathname === "/api/extensions") {
     let files = [];
     try {

@@ -63,7 +63,10 @@ function createExtensionRegistryStore(
     };
 
     const downloadExtension = async (url: string) => {
-      const res = await fetch(url);
+      const fetchUrl = !isDesktopApp()
+        ? `/api/ext-proxy?url=${encodeURIComponent(url)}`
+        : url;
+      const res = await fetch(fetchUrl);
       return new Uint8Array(await res.arrayBuffer());
     };
 

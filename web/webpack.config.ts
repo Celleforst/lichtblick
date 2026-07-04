@@ -60,6 +60,23 @@ const devConfig: WebpackConfiguration = {
     setupMiddlewares: (middlewares, devServer) => {
       if (devServer.app == undefined) return middlewares;
 
+      devServer.app.get("/api/ext-proxy", async (req, res) => {
+        const target = String(req.query["url"] ?? "");
+        if (!target) { res.status(400).send("Missing url"); return; }
+        let targetUrl: URL;
+        try { targetUrl = new URL(target); } catch { res.status(400).send("Invalid url"); return; }
+        if (targetUrl.protocol !== "https:") { res.status(403).send("Only https allowed"); return; }
+        try {
+          const upstream = await fetch(target);
+          const buf = Buffer.from(await upstream.arrayBuffer());
+          res.setHeader("Content-Type", upstream.headers.get("content-type") ?? "application/octet-stream");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.status(upstream.status).send(buf);
+        } catch {
+          res.status(502).send("Proxy fetch failed");
+        }
+      });
+
       devServer.app.get("/api/server-files", (_req, res) => {
         const files = listBagsRecursive(ROSBAG_FOLDER);
         res.json(files);
