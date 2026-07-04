@@ -7,8 +7,6 @@
 
 import { useMemo, useState } from "react";
 
-import { useServerExtensionSync } from "./hooks/useServerExtensionSync";
-
 import {
   AppBarProps,
   AppSetting,
@@ -29,13 +27,14 @@ import {
 import { APP_CONFIG } from "@lichtblick/suite-base/constants/config";
 import { AppParametersInput } from "@lichtblick/suite-base/context/AppParametersContext";
 
+import { useServerExtensionSync } from "./hooks/useServerExtensionSync";
 import LocalStorageAppConfiguration from "./services/LocalStorageAppConfiguration";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
-function ServerExtensionSyncer(): null {
+function ServerExtensionSyncProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   useServerExtensionSync();
-  return null;
+  return <>{children}</>;
 }
 
 export function WebRoot(props: {
@@ -90,6 +89,8 @@ export function WebRoot(props: {
     return props.dataSources ?? sources;
   }, [props.dataSources]);
 
+  const extraEndProviders = useMemo(() => [<ServerExtensionSyncProvider key="server-ext-sync" />], []);
+
   return (
     <SharedRoot
       enableLaunchPreferenceScreen
@@ -100,9 +101,9 @@ export function WebRoot(props: {
       extensionLoaders={extensionLoaders}
       enableGlobalCss
       extraProviders={props.extraProviders}
+      extraEndProviders={extraEndProviders}
       AppBarComponent={props.AppBarComponent}
     >
-      <ServerExtensionSyncer />
       {props.children}
     </SharedRoot>
   );

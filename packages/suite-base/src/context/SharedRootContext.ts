@@ -28,6 +28,7 @@ interface ISharedRootContext {
   enableGlobalCss?: boolean;
   appBarLeftInset?: number;
   extraProviders?: readonly React.JSX.Element[];
+  extraEndProviders?: readonly React.JSX.Element[];
   customWindowControlProps?: CustomWindowControlsProps;
   onAppBarDoubleClick?: () => void;
   AppBarComponent?: (props: AppBarProps) => React.JSX.Element;
