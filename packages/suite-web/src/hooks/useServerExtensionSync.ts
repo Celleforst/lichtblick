@@ -31,7 +31,7 @@ export function useServerExtensionSync(): void {
       const buffers = await Promise.all(
         toInstall.map(async (ext) => {
           const r = await fetch(ext.url);
-          return { buffer: await r.arrayBuffer() };
+          return { buffer: new Uint8Array(await r.arrayBuffer()) };
         }),
       );
       await installExtensions("local", buffers);
