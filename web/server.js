@@ -273,8 +273,9 @@ server.on("upgrade", (req, socket, head) => {
       serverWs.on("message", (data, isBinary) => {
         if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data, { binary: isBinary });
       });
-      clientWs.on("close", (code, reason) => { serverWs.close(code, reason); });
-      serverWs.on("close", (code, reason) => { clientWs.close(code, reason); });
+      const safeCode = (code) => (code >= 1000 && code <= 4999 ? code : 1000);
+      clientWs.on("close", (code, reason) => { serverWs.close(safeCode(code), reason); });
+      serverWs.on("close", (code, reason) => { clientWs.close(safeCode(code), reason); });
       clientWs.on("error", () => { serverWs.terminate(); });
       serverWs.on("error", () => { clientWs.terminate(); });
     });
