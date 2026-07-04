@@ -60,6 +60,31 @@ function buildTree(files: ServerFile[]): TreeNode {
   return root;
 }
 
+const DATE_PREFIX = /^(\d{4})[-_](\d{2})[-_](\d{2})/;
+
+function dateKey(name: string): string | undefined {
+  const m = DATE_PREFIX.exec(name);
+  return m != undefined ? `${m[1]}${m[2]}${m[3]}` : undefined;
+}
+
+function sortNodes(a: TreeNode, b: TreeNode): number {
+  // files always after folders
+  const aIsFile = a.size != undefined ? 1 : 0;
+  const bIsFile = b.size != undefined ? 1 : 0;
+  if (aIsFile !== bIsFile) return aIsFile - bIsFile;
+
+  const aDate = dateKey(a.name);
+  const bDate = dateKey(b.name);
+
+  // both dated → newest first
+  if (aDate != undefined && bDate != undefined) return bDate.localeCompare(aDate);
+  // only one dated → dated comes first
+  if (aDate != undefined) return -1;
+  if (bDate != undefined) return 1;
+  // neither dated → keep original order (stable sort)
+  return 0;
+}
+
 type TreeNodeViewProps = {
   node: TreeNode;
   depth: number;
@@ -95,12 +120,7 @@ function TreeNodeView({ node, depth, selected, onSelect, onOpen }: TreeNodeViewP
 
   const children = [...node.children.values()];
   // sort: folders first, then files
-  children.sort((a, b) => {
-    const aIsFile = a.size != undefined ? 1 : 0;
-    const bIsFile = b.size != undefined ? 1 : 0;
-    if (aIsFile !== bIsFile) return aIsFile - bIsFile;
-    return a.name.localeCompare(b.name);
-  });
+  children.sort(sortNodes);
 
   return (
     <>
@@ -166,12 +186,7 @@ export default function ServerFileBrowser(): React.JSX.Element {
   };
 
   const tree = buildTree(files);
-  const rootChildren = [...tree.children.values()].sort((a, b) => {
-    const aIsFile = a.size != undefined ? 1 : 0;
-    const bIsFile = b.size != undefined ? 1 : 0;
-    if (aIsFile !== bIsFile) return aIsFile - bIsFile;
-    return a.name.localeCompare(b.name);
-  });
+  const rootChildren = [...tree.children.values()].sort(sortNodes);
 
   return (
     <View onOpen={selected != undefined ? () => { handleOpen(selected); } : undefined}>

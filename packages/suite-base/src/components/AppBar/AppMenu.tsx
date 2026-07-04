@@ -94,6 +94,16 @@ export function AppMenu(props: AppMenuProps): React.JSX.Element {
       },
       {
         type: "item",
+        label: t("openServerFiles"),
+        key: "open-server-file",
+        dataTestId: "menu-item-open-server-file",
+        onClick: () => {
+          dialogActions.dataSource.open("server-file");
+          handleNestedMenuClose();
+        },
+      },
+      {
+        type: "item",
         label: t("openConnection"),
         key: "open-connection",
         shortcut: formatKeyboardShortcut("O", ["Meta", "Shift"]),
