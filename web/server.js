@@ -169,6 +169,7 @@ const server = http.createServer((req, res) => {
   serveStaticFile(filePath, req, res);
 });
 
+const { WebSocketServer, WebSocket } = require("ws");
 const os = require("os");
 
 function getLocalIPs() {
@@ -181,6 +182,41 @@ function getLocalIPs() {
   }
   return ips;
 }
+
+// WebSocket proxy: browser connects to ws://server/proxy?target=ws://robot:8765
+// and the server forwards the connection to the target from its own network.
+const wss = new WebSocketServer({ noServer: true });
+server.on("upgrade", (req, socket, head) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  if (url.pathname !== "/proxy") {
+    socket.destroy();
+    return;
+  }
+  const target = url.searchParams.get("target");
+  if (target == null) {
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (clientWs) => {
+    const serverWs = new WebSocket(target);
+    serverWs.on("open", () => {
+      clientWs.on("message", (data, isBinary) => {
+        if (serverWs.readyState === WebSocket.OPEN) serverWs.send(data, { binary: isBinary });
+      });
+      serverWs.on("message", (data, isBinary) => {
+        if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data, { binary: isBinary });
+      });
+      clientWs.on("close", (code, reason) => { serverWs.close(code, reason); });
+      serverWs.on("close", (code, reason) => { clientWs.close(code, reason); });
+      clientWs.on("error", () => { serverWs.terminate(); });
+      serverWs.on("error", () => { clientWs.terminate(); });
+    });
+    serverWs.on("error", (err) => {
+      console.error(`[proxy] failed to connect to ${target}:`, err.message);
+      clientWs.close(1011, "Proxy target unreachable");
+    });
+  });
+});
 
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;

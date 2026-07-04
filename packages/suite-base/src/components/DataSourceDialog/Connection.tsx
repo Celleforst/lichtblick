@@ -5,13 +5,15 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
-import { Alert, Link, Tab, Tabs, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Checkbox, FormControlLabel, Link, Tab, Tabs, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useState, useMemo, useCallback, useLayoutEffect, FormEvent } from "react";
 import { makeStyles } from "tss-react/mui";
 
 import { BuiltinIcon } from "@lichtblick/suite-base/components/BuiltinIcon";
 import Stack from "@lichtblick/suite-base/components/Stack";
+import { AppSetting } from "@lichtblick/suite-base/AppSetting";
 import { useAnalytics } from "@lichtblick/suite-base/context/AnalyticsContext";
+import { useAppConfigurationValue } from "@lichtblick/suite-base/hooks/useAppConfigurationValue";
 import { usePlayerSelection } from "@lichtblick/suite-base/context/PlayerSelectionContext";
 import {
   WorkspaceContextStore,
@@ -132,6 +134,10 @@ export default function Connection(): React.JSX.Element {
 
   const [fieldErrors, setFieldErrors] = useState(new Map<string, string>());
   const [fieldValues, setFieldValues] = useState<Record<string, string | undefined>>({});
+  const [routeViaServer, setRouteViaServer] = useState(false);
+  const [savedProxyUrl] = useAppConfigurationValue<string>(AppSetting.SERVER_PROXY_URL);
+  const defaultProxyUrl = `${window.location.origin.replace(/^http/, "ws")}/proxy`;
+  const proxyUrl = savedProxyUrl != undefined && savedProxyUrl.length > 0 ? savedProxyUrl : defaultProxyUrl;
 
   useLayoutEffect(() => {
     const connectionIdx = connectionSources.findIndex((source) => source === activeDataSource);
@@ -155,13 +161,19 @@ export default function Connection(): React.JSX.Element {
     if (!selectedSource) {
       return;
     }
-    selectSource(selectedSource.id, { type: "connection", params: fieldValues });
+    let params = fieldValues;
+    if (routeViaServer && fieldValues.url != undefined) {
+      params = { ...fieldValues, url: `${proxyUrl}?target=${encodeURIComponent(fieldValues.url)}` };
+    }
+    selectSource(selectedSource.id, { type: "connection", params });
     void analytics.logEvent(AppEvent.DIALOG_CLOSE, { activeDataSource });
     dialogActions.dataSource.close();
   }, [
     selectedSource,
     selectSource,
     fieldValues,
+    routeViaServer,
+    proxyUrl,
     analytics,
     activeDataSource,
     dialogActions.dataSource,
@@ -259,6 +271,18 @@ export default function Connection(): React.JSX.Element {
                     ))}
                   </Stack>
                 </Stack>
+              )}
+              {fieldValues.url != undefined && (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={routeViaServer}
+                      onChange={(e) => { setRouteViaServer(e.target.checked); }}
+                      size="small"
+                    />
+                  }
+                  label="Route connection through server"
+                />
               )}
               <Stack direction="row" gap={1}>
                 {(selectedSource?.docsLinks ?? []).map((item) => (

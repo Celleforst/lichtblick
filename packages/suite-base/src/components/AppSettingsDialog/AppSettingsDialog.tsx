@@ -50,6 +50,7 @@ import {
   LanguageSettings,
   LaunchDefault,
   MessageFramerate,
+  ServerSettings,
   StepSize,
   RosPackagePath,
   TimeFormat,
@@ -131,6 +132,7 @@ export function AppSettingsDialog(
               {supportsAppUpdates && <AutoUpdate />}
               {!isDesktopApp() && <LaunchDefault />}
               {isDesktopApp() && <RosPackagePath />}
+              <ServerSettings />
               <Stack>
                 <FormLabel>{t("advanced")}:</FormLabel>
                 <FormControlLabel

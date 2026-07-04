@@ -32,6 +32,10 @@ export enum AppSetting {
   SHOW_OPEN_DIALOG_ON_STARTUP = "ui.open-dialog-startup",
   ENABLE_UNIFIED_NAVIGATION = "ui.new-app-menu",
 
+  // Server
+  SERVER_PROXY_URL = "server.proxyUrl",
+  SERVER_FILES_URL = "server.filesUrl",
+
   // Dev only
   ENABLE_LAYOUT_DEBUGGING = "enableLayoutDebugging",
   ENABLE_MEMORY_USE_INDICATOR = "dev.memory-use-indicator",
