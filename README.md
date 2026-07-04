@@ -20,6 +20,29 @@ Lichtblick is an integrated visualization and diagnosis tool for robotics, avail
   </p>
 </div>
 
+## Storage server fork
+
+This fork adds an **"Open server file(s)..."** option to the data source dialog, allowing the web app to browse and open rosbag/MCAP files directly from the machine running the server — no client-side file picker, no CORS wrestling with a separate object store.
+
+### How it works
+
+- The web server serves bag files from a configured folder at `/bags/` with full HTTP range request support (enabling seek/scrub without downloading the whole file)
+- `/api/server-files` returns a recursive listing of all `.mcap` and `.bag` files in the folder
+- The browser opens the selected file via a same-origin URL, so seeking is fast
+
+### Running
+
+```bash
+# Development (hot reload)
+ROSBAG_FOLDER=/mnt/rosbags yarn web:serve
+
+# Production
+yarn web:build:prod
+ROSBAG_FOLDER=/mnt/rosbags node web/server.js
+```
+
+---
+
 ## :rocket: Try Lichtblick
 
 **[Try Lichtblick now in your browser!](https://lichtblick-suite.github.io/lichtblick/)**
