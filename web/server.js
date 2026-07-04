@@ -146,7 +146,26 @@ const server = http.createServer((req, res) => {
   serveStaticFile(filePath, req, res);
 });
 
+const os = require("os");
+
+function getLocalIPs() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const iface of Object.values(interfaces)) {
+    for (const addr of iface ?? []) {
+      if (addr.family === "IPv4" && !addr.internal) ips.push(addr.address);
+    }
+  }
+  return ips;
+}
+
 server.listen(PORT, () => {
-  console.log(`Lichtblick server running at http://0.0.0.0:${PORT}`);
-  console.log(`Serving rosbags from: ${ROSBAG_FOLDER}`);
+  const green = (s) => `\x1b[32m${s}\x1b[0m`;
+  const bagCount = listBagsRecursive(ROSBAG_FOLDER).length;
+  console.log(green(`<i> [lichtblick] Project is running at:`));
+  console.log(green(`<i> [lichtblick] Loopback: http://localhost:${PORT}/`));
+  for (const ip of getLocalIPs()) {
+    console.log(green(`<i> [lichtblick] On Your Network (IPv4): http://${ip}:${PORT}/`));
+  }
+  console.log(green(`<i> [lichtblick] Serving rosbags from: ${ROSBAG_FOLDER} (${bagCount} files)`));
 });
