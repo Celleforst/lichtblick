@@ -70,7 +70,7 @@ type TreeNodeViewProps = {
 
 function TreeNodeView({ node, depth, selected, onSelect, onOpen }: TreeNodeViewProps): React.JSX.Element {
   const isFile = node.size != undefined;
-  const [open, setOpen] = useState(depth < 1);
+  const [open, setOpen] = useState(false);
 
   if (isFile) {
     return (
