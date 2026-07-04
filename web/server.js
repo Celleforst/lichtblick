@@ -53,6 +53,12 @@ function serveStaticFile(filePath, req, res) {
   });
 }
 
+const READ_BUFFER = 2 * 1024 * 1024; // 2MB read buffer
+
+function isBagFile(ext) {
+  return ext === ".mcap" || ext === ".bag";
+}
+
 function serveWithRange(filePath, stat, req, res) {
   const ext = path.extname(filePath).toLowerCase();
   const mimeTypes = {
@@ -67,6 +73,23 @@ function serveWithRange(filePath, stat, req, res) {
     ".bag": "application/octet-stream",
   };
   const contentType = mimeTypes[ext] ?? "application/octet-stream";
+  const etag = `"${stat.size}-${stat.mtimeMs}"`;
+
+  // ETag cache validation — return 304 if unchanged
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304);
+    res.end();
+    return;
+  }
+
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Expose-Headers": "Accept-Ranges, Content-Range, Content-Length, ETag",
+  };
+  // Bag files: cache aggressively (content is immutable once recorded)
+  const cacheHeaders = isBagFile(ext)
+    ? { "Cache-Control": "public, max-age=86400", "ETag": etag, "Last-Modified": stat.mtime.toUTCString() }
+    : { "Cache-Control": "no-cache" };
 
   const range = req.headers["range"];
   if (range != null) {
@@ -79,19 +102,19 @@ function serveWithRange(filePath, stat, req, res) {
       "Accept-Ranges": "bytes",
       "Content-Length": chunkSize,
       "Content-Type": contentType,
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Expose-Headers": "Accept-Ranges, Content-Range, Content-Length",
+      ...corsHeaders,
+      ...cacheHeaders,
     });
-    fs.createReadStream(filePath, { start, end }).pipe(res);
+    fs.createReadStream(filePath, { start, end, highWaterMark: READ_BUFFER }).pipe(res);
   } else {
     res.writeHead(200, {
       "Content-Length": stat.size,
       "Content-Type": contentType,
       "Accept-Ranges": "bytes",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Expose-Headers": "Accept-Ranges, Content-Range, Content-Length",
+      ...corsHeaders,
+      ...cacheHeaders,
     });
-    fs.createReadStream(filePath).pipe(res);
+    fs.createReadStream(filePath, { highWaterMark: READ_BUFFER }).pipe(res);
   }
 }
 
@@ -158,6 +181,9 @@ function getLocalIPs() {
   }
   return ips;
 }
+
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 server.listen(PORT, () => {
   const green = (s) => `\x1b[32m${s}\x1b[0m`;
