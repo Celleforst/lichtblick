@@ -275,9 +275,16 @@ server.on("upgrade", (req, socket, head) => {
       serverWs.on("message", (data, isBinary) => {
         if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data, { binary: isBinary });
       });
-      const safeCode = (code) => (code >= 1000 && code <= 4999 ? code : 1000);
-      clientWs.on("close", (code, reason) => { serverWs.close(safeCode(code), reason); });
-      serverWs.on("close", (code, reason) => { clientWs.close(safeCode(code), reason); });
+      const isSendableCode = (code) =>
+        (code >= 1000 && code <= 1014 && code !== 1004 && code !== 1005 && code !== 1006) ||
+        (code >= 3000 && code <= 4999);
+      const proxyClose = (dst, code, reason) => {
+        if (dst.readyState === WebSocket.OPEN) {
+          isSendableCode(code) ? dst.close(code, reason) : dst.terminate();
+        }
+      };
+      clientWs.on("close", (code, reason) => { proxyClose(serverWs, code, reason); });
+      serverWs.on("close", (code, reason) => { proxyClose(clientWs, code, reason); });
       clientWs.on("error", () => { serverWs.terminate(); });
       serverWs.on("error", () => { clientWs.terminate(); });
     });
