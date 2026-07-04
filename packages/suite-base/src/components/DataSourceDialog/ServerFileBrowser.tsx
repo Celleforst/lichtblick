@@ -1,10 +1,14 @@
 // SPDX-FileCopyrightText: Copyright (C) 2023-2026 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)<lichtblick@bmwgroup.com>
 // SPDX-License-Identifier: MPL-2.0
 
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderIcon from "@mui/icons-material/Folder";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import {
   CircularProgress,
+  Collapse,
   List,
   ListItem,
   ListItemButton,
@@ -25,10 +29,110 @@ type ServerFile = {
   size: number;
 };
 
+type TreeNode = {
+  name: string;
+  fullPath: string;
+  size?: number;
+  children: Map<string, TreeNode>;
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function buildTree(files: ServerFile[]): TreeNode {
+  const root: TreeNode = { name: "", fullPath: "", children: new Map() };
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let node = root;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]!;
+      if (!node.children.has(part)) {
+        const fullPath = parts.slice(0, i + 1).join("/");
+        node.children.set(part, { name: part, fullPath, children: new Map() });
+      }
+      node = node.children.get(part)!;
+    }
+    node.size = file.size;
+  }
+  return root;
+}
+
+type TreeNodeViewProps = {
+  node: TreeNode;
+  depth: number;
+  selected: string | undefined;
+  onSelect: (path: string) => void;
+  onOpen: (path: string) => void;
+};
+
+function TreeNodeView({ node, depth, selected, onSelect, onOpen }: TreeNodeViewProps): React.JSX.Element {
+  const isFile = node.size != undefined;
+  const [open, setOpen] = useState(depth < 1);
+
+  if (isFile) {
+    return (
+      <ListItem disablePadding>
+        <ListItemButton
+          selected={selected === node.fullPath}
+          onClick={() => { onSelect(node.fullPath); }}
+          onDoubleClick={() => { onOpen(node.fullPath); }}
+          sx={{ pl: depth * 2 + 1 }}
+        >
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <InsertDriveFileIcon fontSize="small" color="action" />
+          </ListItemIcon>
+          <ListItemText primary={node.name} />
+          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+            {node.size != undefined ? formatBytes(node.size) : ""}
+          </Typography>
+        </ListItemButton>
+      </ListItem>
+    );
+  }
+
+  const children = [...node.children.values()];
+  // sort: folders first, then files
+  children.sort((a, b) => {
+    const aIsFile = a.size != undefined ? 1 : 0;
+    const bIsFile = b.size != undefined ? 1 : 0;
+    if (aIsFile !== bIsFile) return aIsFile - bIsFile;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (
+    <>
+      <ListItem disablePadding>
+        <ListItemButton onClick={() => { setOpen((v) => !v); }} sx={{ pl: depth * 2 + 1 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            {open ? (
+              <FolderOpenIcon fontSize="small" color="primary" />
+            ) : (
+              <FolderIcon fontSize="small" color="primary" />
+            )}
+          </ListItemIcon>
+          <ListItemText primary={node.name} />
+          {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </ListItemButton>
+      </ListItem>
+      <Collapse in={open} unmountOnExit>
+        <List disablePadding>
+          {children.map((child) => (
+            <TreeNodeView
+              key={child.fullPath}
+              node={child}
+              depth={depth + 1}
+              selected={selected}
+              onSelect={onSelect}
+              onOpen={onOpen}
+            />
+          ))}
+        </List>
+      </Collapse>
+    </>
+  );
 }
 
 export default function ServerFileBrowser(): React.JSX.Element {
@@ -55,15 +159,22 @@ export default function ServerFileBrowser(): React.JSX.Element {
       });
   }, []);
 
-  const handleOpen = () => {
-    if (selected == undefined) return;
-    const url = `${window.location.origin}/bags/${selected}`;
+  const handleOpen = (path: string) => {
+    const url = `${window.location.origin}/bags/${path}`;
     selectSource("remote-file", { type: "connection", params: { url } });
     dialogActions.dataSource.close();
   };
 
+  const tree = buildTree(files);
+  const rootChildren = [...tree.children.values()].sort((a, b) => {
+    const aIsFile = a.size != undefined ? 1 : 0;
+    const bIsFile = b.size != undefined ? 1 : 0;
+    if (aIsFile !== bIsFile) return aIsFile - bIsFile;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
-    <View onOpen={selected != undefined ? handleOpen : undefined}>
+    <View onOpen={selected != undefined ? () => { handleOpen(selected); } : undefined}>
       <Stack paddingX={4} paddingTop={4} gap={2} flexGrow={1} overflow="hidden">
         <Typography variant="h5">Open server file</Typography>
         {loading && (
@@ -77,38 +188,16 @@ export default function ServerFileBrowser(): React.JSX.Element {
         )}
         {!loading && error == undefined && files.length > 0 && (
           <List dense disablePadding sx={{ overflowY: "auto", flexGrow: 1 }}>
-            {files.map((file) => {
-              const parts = file.path.split("/");
-              const filename = parts[parts.length - 1] ?? file.path;
-              const folder = parts.slice(0, -1).join("/");
-              return (
-                <ListItem key={file.path} disablePadding>
-                  <ListItemButton
-                    selected={selected === file.path}
-                    onClick={() => {
-                      setSelected(file.path);
-                    }}
-                    onDoubleClick={handleOpen}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      {folder.length > 0 ? (
-                        <FolderIcon fontSize="small" color="action" />
-                      ) : (
-                        <InsertDriveFileIcon fontSize="small" color="action" />
-                      )}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={filename}
-                      secondary={folder.length > 0 ? folder : undefined}
-                      secondaryTypographyProps={{ noWrap: true }}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
-                      {formatBytes(file.size)}
-                    </Typography>
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+            {rootChildren.map((child) => (
+              <TreeNodeView
+                key={child.fullPath}
+                node={child}
+                depth={0}
+                selected={selected}
+                onSelect={setSelected}
+                onOpen={handleOpen}
+              />
+            ))}
           </List>
         )}
       </Stack>
