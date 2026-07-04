@@ -45,10 +45,18 @@ function listBagsRecursive(dir: string, base: string = ""): { path: string; size
 
 const baseDevConfig = devServerConfig(params);
 
+// Log the rosbag folder after the dev server starts
+const originalOnListening = baseDevConfig.devServer?.onListening;
+
+
 const devConfig: WebpackConfiguration = {
   ...baseDevConfig,
   devServer: {
     ...baseDevConfig.devServer,
+    onListening: (devServer) => {
+      originalOnListening?.(devServer);
+      console.log(`\x1b[32m<i> [rosbag-server] Serving bags from: ${ROSBAG_FOLDER}\x1b[0m`);
+    },
     setupMiddlewares: (middlewares, devServer) => {
       if (devServer.app == undefined) return middlewares;
 
@@ -67,7 +75,7 @@ const devConfig: WebpackConfiguration = {
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Access-Control-Expose-Headers", "Accept-Ranges, Content-Range, Content-Length");
         res.sendFile(filePath, (err) => {
-          if (err != undefined) {
+          if (err != undefined && !res.headersSent) {
             res.status(404).send("Not found");
           }
         });
