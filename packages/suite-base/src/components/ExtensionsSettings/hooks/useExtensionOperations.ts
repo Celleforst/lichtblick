@@ -14,7 +14,6 @@ import { useAnalytics } from "@lichtblick/suite-base/context/AnalyticsContext";
 import { useExtensionCatalog } from "@lichtblick/suite-base/context/ExtensionCatalogContext";
 import { ExtensionMarketplaceDetail } from "@lichtblick/suite-base/context/ExtensionMarketplaceContext";
 import { AppEvent } from "@lichtblick/suite-base/services/IAnalytics";
-import isDesktopApp from "@lichtblick/suite-base/util/isDesktopApp";
 
 /**
  * Custom hook for handling extension install/uninstall operations.
@@ -37,13 +36,6 @@ export function useExtensionOperations(
 
   const handleInstall = useCallback(
     async (extension: Immutable<ExtensionMarketplaceDetail>) => {
-      if (!isDesktopApp()) {
-        enqueueSnackbar("Download the desktop app to use marketplace extensions.", {
-          variant: "error",
-        });
-        return;
-      }
-
       const url = extension.foxe;
       if (url == undefined) {
         enqueueSnackbar(`Cannot install extension ${extension.id}, "foxe" URL is missing`, {

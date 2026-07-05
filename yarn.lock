@@ -8196,6 +8196,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bufferutil@npm:^4.0.8":
+  version: 4.1.0
+  resolution: "bufferutil@npm:4.1.0"
+  dependencies:
+    node-gyp: "npm:latest"
+    node-gyp-build: "npm:^4.3.0"
+  checksum: 10/f944f2e66a8cd2eeecc83e29b857382a0666132a7bbf83690df9ff39cb842c5a438da91a7d9c6a22cdc794bf0b6cfbfdf3a689e9c330a8e844b2b7a64c25f3bc
+  languageName: node
+  linkType: hard
+
 "builder-util-runtime@npm:9.7.0":
   version: 9.7.0
   resolution: "builder-util-runtime@npm:9.7.0"
@@ -16108,6 +16118,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-gyp-build@npm:^4.3.0":
+  version: 4.8.4
+  resolution: "node-gyp-build@npm:4.8.4"
+  bin:
+    node-gyp-build: bin.js
+    node-gyp-build-optional: optional.js
+    node-gyp-build-test: build-test.js
+  checksum: 10/6a7d62289d1afc419fc8fc9bd00aa4e554369e50ca0acbc215cb91446148b75ff7e2a3b53c2c5b2c09a39d416d69f3d3237937860373104b5fe429bf30ad9ac5
+  languageName: node
+  linkType: hard
+
 "node-gyp@npm:^12.2.0":
   version: 12.4.0
   resolution: "node-gyp@npm:12.4.0"
@@ -20800,6 +20821,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"utf-8-validate@npm:^6.0.3":
+  version: 6.0.6
+  resolution: "utf-8-validate@npm:6.0.6"
+  dependencies:
+    node-gyp: "npm:latest"
+    node-gyp-build: "npm:^4.3.0"
+  checksum: 10/c1fa53fe5f0e3b7bf990a8ee41d890b10218b087a4ad401519a1a6353a427172fedc29c9af36b81080ea27b311802ae37b0e857b82aaa976238904398870f465
+  languageName: node
+  linkType: hard
+
 "utf8-byte-length@npm:^1.0.1":
   version: 1.0.5
   resolution: "utf8-byte-length@npm:1.0.5"
@@ -21034,10 +21065,13 @@ __metadata:
     "@lichtblick/suite-web": "workspace:*"
     "@lichtblick/tsconfig": "npm:1.1.2"
     "@types/serve-handler": "npm:^6"
+    bufferutil: "npm:^4.0.8"
     playwright: "npm:1.60.0"
     serve-handler: "npm:6.1.7"
+    utf-8-validate: "npm:^6.0.3"
     webpack: "npm:5.108.3"
     webpack-dev-server: "npm:5.2.5"
+    ws: "npm:^8.18.0"
   languageName: unknown
   linkType: soft
 

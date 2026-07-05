@@ -26,6 +26,7 @@ export const appBar = {
   openConnection: "Open connection…",
   openDataSources: "Open data sources",
   openLocalFiles: "Open local file(s)…",
+  openServerFiles: "Open server file(s)…",
   recentDataSources: "Recent data sources",
   recentlyViewed: "Recently viewed",
   settings: "Visualization settings",

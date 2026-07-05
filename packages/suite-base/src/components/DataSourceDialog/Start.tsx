@@ -44,6 +44,20 @@ export default function Start(): React.JSX.Element {
         },
       },
       {
+        key: "open-server-file",
+        text: t("openServerFiles"),
+        secondaryText: t("openServerFilesDescription"),
+        icon: (
+          <SvgIcon fontSize="large" color="primary" viewBox="0 0 2048 2048">
+            <path d="M2048 384v512H0V384h2048zm-128 384V512H128v256h1792zM256 640V512h128v128H256zm256 0V512h128v128H512zm256 0V512h128v128H768zM0 1024h2048v512H0v-512zm128 384h1792v-256H128v256zm128-128V1152h128v128H256zm256 0V1152h128v128H512zm256 0V1152h128v128H768zM0 1664h2048v384H0v-384zm128 256h1792v-128H128v128zm128-64v-128h128v128H256zm256 0v-128h128v128H512zm256 0v-128h128v128H768z" />
+          </SvgIcon>
+        ),
+        onClick: () => {
+          dialogActions.dataSource.open("server-file");
+          void analytics.logEvent(AppEvent.DIALOG_SELECT_VIEW, { type: "server-file" });
+        },
+      },
+      {
         key: "open-connection",
         text: t("openConnection"),
         secondaryText: t("openConnectionDescription"),

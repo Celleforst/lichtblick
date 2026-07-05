@@ -20,6 +20,61 @@ Lichtblick is an integrated visualization and diagnosis tool for robotics, avail
   </p>
 </div>
 
+## Storage server fork
+
+This fork extends Lichtblick for self-hosted rosbag storage servers. It adds server-side file browsing, a WebSocket proxy for connecting to robots through the server's network, persistent extensions and layouts, and a production Node.js server.
+
+### Added features
+
+- **Open server file(s)...** — browse and open `.mcap`/`.bag` files from the server's filesystem directly in the web UI, with a collapsible folder tree sorted by date
+- **Route connection through server** — proxy WebSocket connections (Foxglove bridge, ROS bridge) through the server, so the browser connects to robots on the server's network
+- **Server-side extension sync** — drop `.foxe` files into the extensions folder and they auto-install in every browser on first load
+- **Default layout injection** — mount a `default-layout.json` to give every new browser session a pre-configured layout
+- **Production Node.js server** — replaces Caddy, serves bag files with HTTP range request support and browser caching, prints startup info matching webpack-dev-server format
+- **Marketplace extensions in web** — removed desktop-only restriction so extensions can be installed from the marketplace in the web app
+- **Configurable server URLs** — proxy URL and bag files base URL are configurable in Settings → General
+
+### Running
+
+```bash
+# Development (hot reload)
+ROSBAG_FOLDER=/mnt/rosbags yarn web:serve
+
+# Production build + serve
+yarn web:build:prod
+ROSBAG_FOLDER=/mnt/rosbags node web/server.js
+```
+
+### Docker
+
+```bash
+docker build -t lichtblick .
+
+docker run -p 8080:8080 \
+  -v /mnt/rosbags:/mnt/rosbags \
+  -v /path/to/extensions:/app/extensions \
+  -v /path/to/config:/app/config \
+  -e ROSBAG_FOLDER=/mnt/rosbags \
+  lichtblick
+```
+
+| Volume | Purpose |
+|---|---|
+| `/mnt/rosbags` | Rosbag files served to the browser |
+| `/app/extensions` | `.foxe` extension files, auto-installed on first browser load |
+| `/app/config/default-layout.json` | Default layout applied to every new browser session |
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `8080` | HTTP port |
+| `ROSBAG_FOLDER` | `/mnt/rosbags` | Path to rosbag files |
+| `EXTENSIONS_DIR` | `/app/extensions` | Path to `.foxe` extension files |
+| `CONFIG_DIR` | `/app/config` | Path to config files (`default-layout.json`) |
+
+---
+
 ## :rocket: Try Lichtblick
 
 **[Try Lichtblick now in your browser!](https://lichtblick-suite.github.io/lichtblick/)**

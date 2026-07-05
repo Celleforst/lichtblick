@@ -372,6 +372,35 @@ export function AutoUpdate(): React.ReactElement {
   );
 }
 
+export function ServerSettings(): React.ReactElement {
+  const [proxyUrl, setProxyUrl] = useAppConfigurationValue<string>(AppSetting.SERVER_PROXY_URL);
+  const [filesUrl, setFilesUrl] = useAppConfigurationValue<string>(AppSetting.SERVER_FILES_URL);
+  const defaultProxyUrl = `${window.location.origin.replace(/^http/, "ws")}/proxy`;
+  const defaultFilesUrl = `${window.location.origin}/bags`;
+
+  return (
+    <Stack gap={1}>
+      <FormLabel>Server:</FormLabel>
+      <TextField
+        fullWidth
+        label="Bag files base URL"
+        placeholder={defaultFilesUrl}
+        value={filesUrl ?? ""}
+        onChange={(event) => void setFilesUrl(event.target.value)}
+        helperText="Base URL where bag files are served. Used by 'Open server file'."
+      />
+      <TextField
+        fullWidth
+        label="WebSocket proxy URL"
+        placeholder={defaultProxyUrl}
+        value={proxyUrl ?? ""}
+        onChange={(event) => void setProxyUrl(event.target.value)}
+        helperText="WebSocket proxy endpoint. Used by 'Route connection through server'."
+      />
+    </Stack>
+  );
+}
+
 export function RosPackagePath(): React.ReactElement {
   const [rosPackagePath, setRosPackagePath] = useAppConfigurationValue<string>(
     AppSetting.ROS_PACKAGE_PATH,

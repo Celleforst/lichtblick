@@ -26,6 +26,8 @@ export const openDialog = {
   openDataSource: "Open data source",
   openLocalFiles: "Open local file(s)...",
   openLocalFileDescription: "Visualize data directly from your local filesystem.",
+  openServerFiles: "Open server file(s)...",
+  openServerFilesDescription: "Browse and open files from the storage server.",
   openUrl: "Upload and share data",
   openUrlDescription: "Use Foxglove Data Platform to share data with your team.",
   recentDataSources: "Recent data sources",
