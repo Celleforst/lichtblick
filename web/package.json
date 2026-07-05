@@ -1,6 +1,11 @@
 {
   "name": "web",
   "private": true,
+  "dependencies": {
+    "bufferutil": "^4.0.8",
+    "utf-8-validate": "^6.0.3",
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@lichtblick/log": "workspace:*",
     "@lichtblick/suite-web": "workspace:*",

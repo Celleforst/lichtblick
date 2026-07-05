@@ -56,6 +56,7 @@ export function StudioApp(): React.JSX.Element {
     deepLinks,
     enableLaunchPreferenceScreen,
     extraProviders,
+    extraEndProviders,
     appBarLeftInset,
     customWindowControlProps,
     onAppBarDoubleClick,
@@ -75,6 +76,10 @@ export function StudioApp(): React.JSX.Element {
 
   if (extraProviders) {
     providers.unshift(...extraProviders);
+  }
+
+  if (extraEndProviders) {
+    providers.push(...extraEndProviders);
   }
 
   if (nativeAppMenu) {

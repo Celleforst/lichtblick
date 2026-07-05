@@ -11,6 +11,8 @@ const path = require("path");
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
 const ROSBAG_FOLDER = process.env.ROSBAG_FOLDER ?? "/mnt/rosbags";
+const CONFIG_DIR = process.env.CONFIG_DIR ?? "/app/config";
+const EXTENSIONS_DIR = process.env.EXTENSIONS_DIR ?? "/app/extensions";
 const STATIC_DIR = path.join(__dirname, ".webpack");
 
 function listBagsRecursive(dir, base = "") {
@@ -33,20 +35,37 @@ function listBagsRecursive(dir, base = "") {
   return results;
 }
 
+function getDefaultLayout() {
+  try {
+    const layoutPath = path.join(CONFIG_DIR, "default-layout.json");
+    return fs.readFileSync(layoutPath, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+function serveIndex(res) {
+  const indexPath = path.join(STATIC_DIR, "index.html");
+  fs.readFile(indexPath, "utf8", (e, html) => {
+    if (e != null) { res.writeHead(404); res.end("Not found"); return; }
+    const layout = getDefaultLayout();
+    if (layout.length > 0) {
+      html = html.replace("/*LICHTBLICK_SUITE_DEFAULT_LAYOUT_PLACEHOLDER*/", layout);
+    }
+    res.writeHead(200, {
+      "Content-Type": "text/html",
+      "Content-Length": Buffer.byteLength(html),
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "credentialless",
+    });
+    res.end(html);
+  });
+}
+
 function serveStaticFile(filePath, req, res) {
   fs.stat(filePath, (err, stat) => {
     if (err != null || !stat.isFile()) {
-      // SPA fallback: serve index.html for unknown paths
-      const indexPath = path.join(STATIC_DIR, "index.html");
-      fs.readFile(indexPath, (e, data) => {
-        if (e != null) {
-          res.writeHead(404);
-          res.end("Not found");
-          return;
-        }
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(data);
-      });
+      serveIndex(res);
       return;
     }
     serveWithRange(filePath, stat, req, res);
@@ -133,6 +152,55 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === "/api/ext-proxy") {
+    const target = url.searchParams.get("url");
+    if (!target) { res.writeHead(400); res.end("Missing url"); return; }
+    let targetUrl;
+    try { targetUrl = new URL(target); } catch { res.writeHead(400); res.end("Invalid url"); return; }
+    if (targetUrl.protocol !== "https:") { res.writeHead(403); res.end("Only https allowed"); return; }
+    void (async () => {
+      try {
+        const upstream = await fetch(target);
+        const buf = Buffer.from(await upstream.arrayBuffer());
+        res.writeHead(upstream.status, {
+          "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+          "Content-Length": buf.length,
+          "Access-Control-Allow-Origin": "*",
+        });
+        res.end(buf);
+      } catch {
+        res.writeHead(502); res.end("Proxy fetch failed");
+      }
+    })();
+    return;
+  }
+
+  if (pathname === "/api/extensions") {
+    let files = [];
+    try {
+      files = fs.readdirSync(EXTENSIONS_DIR)
+        .filter((f) => f.endsWith(".foxe"))
+        .map((f) => ({ name: f, url: `/api/extensions/${f}` }));
+    } catch { /* folder doesn't exist, return empty list */ }
+    const body = JSON.stringify(files);
+    res.writeHead(200, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) });
+    res.end(body);
+    return;
+  }
+
+  if (pathname.startsWith("/api/extensions/")) {
+    const name = path.basename(pathname);
+    const filePath = path.join(EXTENSIONS_DIR, name);
+    if (!filePath.startsWith(path.resolve(EXTENSIONS_DIR)) || !name.endsWith(".foxe")) {
+      res.writeHead(403); res.end("Forbidden"); return;
+    }
+    fs.stat(filePath, (err, stat) => {
+      if (err != null || !stat.isFile()) { res.writeHead(404); res.end("Not found"); return; }
+      serveWithRange(filePath, stat, req, res);
+    });
+    return;
+  }
+
   if (pathname === "/api/server-files") {
     const files = listBagsRecursive(ROSBAG_FOLDER);
     const body = JSON.stringify(files);
@@ -169,6 +237,7 @@ const server = http.createServer((req, res) => {
   serveStaticFile(filePath, req, res);
 });
 
+const { WebSocketServer, WebSocket } = require("ws");
 const os = require("os");
 
 function getLocalIPs() {
@@ -181,6 +250,50 @@ function getLocalIPs() {
   }
   return ips;
 }
+
+// WebSocket proxy: browser connects to ws://server/proxy?target=ws://robot:8765
+// and the server forwards the connection to the target from its own network.
+const wss = new WebSocketServer({ noServer: true });
+server.on("upgrade", (req, socket, head) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  if (url.pathname !== "/proxy") {
+    socket.destroy();
+    return;
+  }
+  const target = url.searchParams.get("target");
+  if (target == null) {
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (clientWs) => {
+    const protocols = req.headers["sec-websocket-protocol"];
+    const serverWs = new WebSocket(target, protocols ? protocols.split(/,\s*/) : undefined);
+    serverWs.on("open", () => {
+      clientWs.on("message", (data, isBinary) => {
+        if (serverWs.readyState === WebSocket.OPEN) serverWs.send(data, { binary: isBinary });
+      });
+      serverWs.on("message", (data, isBinary) => {
+        if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data, { binary: isBinary });
+      });
+      const isSendableCode = (code) =>
+        (code >= 1000 && code <= 1014 && code !== 1004 && code !== 1005 && code !== 1006) ||
+        (code >= 3000 && code <= 4999);
+      const proxyClose = (dst, code, reason) => {
+        if (dst.readyState === WebSocket.OPEN) {
+          isSendableCode(code) ? dst.close(code, reason) : dst.terminate();
+        }
+      };
+      clientWs.on("close", (code, reason) => { proxyClose(serverWs, code, reason); });
+      serverWs.on("close", (code, reason) => { proxyClose(clientWs, code, reason); });
+      clientWs.on("error", () => { serverWs.terminate(); });
+      serverWs.on("error", () => { clientWs.terminate(); });
+    });
+    serverWs.on("error", (err) => {
+      console.error(`[proxy] failed to connect to ${target}:`, err.message);
+      clientWs.close(1011, "Proxy target unreachable");
+    });
+  });
+});
 
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;

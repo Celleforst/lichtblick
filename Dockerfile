@@ -12,6 +12,9 @@ RUN yarn run web:build:prod
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /src/web/.webpack ./.webpack
+COPY --from=build /src/node_modules/ws ./node_modules/ws
+COPY --from=build /src/node_modules/bufferutil ./node_modules/bufferutil
+COPY --from=build /src/node_modules/utf-8-validate ./node_modules/utf-8-validate
 COPY web/server.js ./
 
 EXPOSE 8080

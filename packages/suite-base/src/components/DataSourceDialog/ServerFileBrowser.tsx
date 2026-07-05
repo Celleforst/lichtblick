@@ -18,9 +18,11 @@ import {
 } from "@mui/material";
 import { useState, useEffect } from "react";
 
+import { AppSetting } from "@lichtblick/suite-base/AppSetting";
 import Stack from "@lichtblick/suite-base/components/Stack";
 import { usePlayerSelection } from "@lichtblick/suite-base/context/PlayerSelectionContext";
 import { useWorkspaceActions } from "@lichtblick/suite-base/context/Workspace/useWorkspaceActions";
+import { useAppConfigurationValue } from "@lichtblick/suite-base/hooks/useAppConfigurationValue";
 
 import View from "./View";
 
@@ -162,6 +164,10 @@ export default function ServerFileBrowser(): React.JSX.Element {
   const [error, setError] = useState<string | undefined>();
   const { selectSource } = usePlayerSelection();
   const { dialogActions } = useWorkspaceActions();
+  const [savedFilesUrl] = useAppConfigurationValue<string>(AppSetting.SERVER_FILES_URL);
+  const filesBaseUrl = savedFilesUrl != undefined && savedFilesUrl.length > 0
+    ? savedFilesUrl.replace(/\/$/, "")
+    : `${window.location.origin}/bags`;
 
   useEffect(() => {
     fetch("/api/server-files")
@@ -180,7 +186,7 @@ export default function ServerFileBrowser(): React.JSX.Element {
   }, []);
 
   const handleOpen = (path: string) => {
-    const url = `${window.location.origin}/bags/${path}`;
+    const url = `${filesBaseUrl}/${path}`;
     selectSource("remote-file", { type: "connection", params: { url } });
     dialogActions.dataSource.close();
   };
